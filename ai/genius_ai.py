@@ -1,0 +1,1369 @@
+# ==================== pandas fallback ====================
+try:
+    import pandas as pd
+    HAS_PANDAS = True
+except ImportError:
+    HAS_PANDAS = False
+    # جایگزین ساده برای مواقع ضروری
+    class SimpleDataFrame:
+        def __init__(self, data=None):
+            self.data = data or []
+        def to_dict(self):
+            return {}
+    pd = SimpleDataFrame
+# ====================================================
+
+# ai/genius_ai.py
+"""
+هوش مصنوعی نابغه با قابلیت:
+- یادگیری عمیق از کتاب‌ها
+- حافظه بلندمدت (یک ساله)
+- خودآموزی از نتایج
+- ترکیب چند مدل (Ensemble)
+- تحلیل احساسات و الگوها
+- پیش‌بینی با دقت بالا
+"""
+
+import numpy as np
+# import pandas as pd
+from datetime import datetime, timedelta
+from typing import Dict, List, Tuple, Optional, Any, Union
+import json
+import pickle
+import hashlib
+import logging
+import asyncio
+import aiohttp
+from collections import Counter, defaultdict
+import math
+import random
+
+# Machine Learning
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, GradientBoostingRegressor, AdaBoostRegressor
+from sklearn.svm import SVR, SVC
+from sklearn.neural_network import MLPRegressor
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import mean_squared_error, r2_score, accuracy_score
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.decomposition import PCA
+
+# Deep Learning
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers, models, optimizers, losses, metrics
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+
+# NLP
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+from textblob import TextBlob
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer as VaderAnalyzer
+import re
+
+# Transformers (برای مدل‌های زبانی پیشرفته)
+from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification, AutoModel
+
+# Prophet برای پیش‌بینی سری زمانی
+from prophet import Prophet
+from prophet.serialize import model_to_json, model_from_json
+
+# Stats
+import statsmodels.api as sm
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.stattools import adfuller
+
+# Prophet
+from prophet import Prophet
+
+# Local
+from database.models import LearningMemory, Prediction, Feedback, get_db
+from core.numerology_engine import NumerologyEngine
+from config import *
+
+logger = logging.getLogger(__name__)
+
+class GeniusAI:
+    """
+    هوش مصنوعی نابغه - قلب تپنده ربات
+    
+    قابلیت‌ها:
+    - ۱۰ مدل مختلف ML/DL
+    - حافظه بلندمدت (یک سال)
+    - یادگیری از کتاب‌ها
+    - تحلیل چندبعدی
+    - خودبهبودی مستمر
+    - دقت بالا با Ensemble
+    """
+    
+    def __init__(self, db_session=None, numerology_engine=None):
+        self.db = db_session
+        self.numerology = numerology_engine or NumerologyEngine(db_session)
+        
+        # ==================== حافظه ====================
+        self.memory = []
+        self.pattern_memory = []
+        self.learning_memory = []
+        self.correlation_memory = {}
+        
+        # ==================== مدل‌ها ====================
+        self.models = {}
+        self.scalers = {}
+        self.vectorizers = {}
+        self.ensembles = {}
+        
+        # ==================== NLP ====================
+        self.sentiment_analyzer = VaderAnalyzer()
+        self.nltk.download('vader_lexicon', quiet=True)
+        
+        # ==================== پارامترها ====================
+        self.confidence_threshold = 0.65
+        self.learning_rate = LEARNING_RATE
+        self.memory_retention_days = MEMORY_RETENTION_DAYS
+        self.auto_learn = AUTO_LEARN
+        self.ensemble_voting = ENSEMBLE_VOTING
+        
+        # ==================== آمار ====================
+        self.stats = {
+            'total_predictions': 0,
+            'correct_predictions': 0,
+            'accuracy': 0.0,
+            'learned_patterns': 0,
+            'active_models': 0,
+            'last_training': None
+        }
+        
+        # بارگذاری مدل‌ها و حافظه
+        self.load_memory()
+        self.init_models()
+        self.load_models()
+        
+        logger.info("🧠 GeniusAI initialized with 10+ models and long-term memory")
+    
+    # ==================== مقداردهی اولیه مدل‌ها ====================
+    
+    def init_models(self):
+        """ایجاد ۱۰ مدل مختلف برای Ensemble"""
+        
+        # 1. Random Forest
+        self.models['rf_classifier'] = RandomForestClassifier(
+            n_estimators=200, 
+            max_depth=15,
+            min_samples_split=5,
+            random_state=42
+        )
+        self.models['rf_regressor'] = RandomForestRegressor(
+            n_estimators=200,
+            max_depth=15,
+            random_state=42
+        )
+        
+        # 2. Gradient Boosting
+        self.models['gb_classifier'] = GradientBoostingRegressor(
+            n_estimators=150,
+            learning_rate=0.1,
+            max_depth=5,
+            random_state=42
+        )
+        
+        # 3. SVM
+        self.models['svm_classifier'] = SVC(
+            kernel='rbf',
+            C=1.0,
+            gamma='scale',
+            probability=True,
+            random_state=42
+        )
+        self.models['svm_regressor'] = SVR(
+            kernel='rbf',
+            C=1.0,
+            gamma='scale'
+        )
+        
+        # 4. Neural Network (MLP)
+        self.models['mlp_classifier'] = MLPRegressor(
+            hidden_layer_sizes=(100, 50, 25),
+            activation='relu',
+            learning_rate='adaptive',
+            max_iter=500,
+            random_state=42
+        )
+        
+        # 5. AdaBoost
+        self.models['ada_boost'] = AdaBoostRegressor(
+            n_estimators=100,
+            learning_rate=0.1,
+            random_state=42
+        )
+        
+        # 6. XGBoost (اگر نصب باشه)
+        try:
+            import xgboost as xgb
+            self.models['xgb_classifier'] = xgb.XGBClassifier(
+                n_estimators=150,
+                max_depth=6,
+                learning_rate=0.1,
+                random_state=42
+            )
+            self.models['xgb_regressor'] = xgb.XGBRegressor(
+                n_estimators=150,
+                max_depth=6,
+                learning_rate=0.1,
+                random_state=42
+            )
+        except ImportError:
+            logger.warning("XGBoost not installed")
+        
+        # 7. LightGBM (اگر نصب باشه)
+        try:
+            import lightgbm as lgb
+            self.models['lgb_classifier'] = lgb.LGBMClassifier(
+                n_estimators=150,
+                max_depth=6,
+                learning_rate=0.1,
+                random_state=42
+            )
+            self.models['lgb_regressor'] = lgb.LGBMRegressor(
+                n_estimators=150,
+                max_depth=6,
+                learning_rate=0.1,
+                random_state=42
+            )
+        except ImportError:
+            logger.warning("LightGBM not installed")
+        
+        # 8. Deep Neural Network (Keras/TensorFlow)
+        self.create_deep_learning_models()
+        
+        # 9. Prophet (برای سری زمانی)
+        self.models['prophet'] = Prophet(
+            yearly_seasonality=True,
+            weekly_seasonality=True,
+            daily_seasonality=True,
+            changepoint_prior_scale=0.05
+        )
+        
+        # 10. ARIMA (برای سری زمانی)
+        # در زمان استفاده ایجاد می‌شود
+        
+        # Scalers
+        self.scalers['standard'] = StandardScaler()
+        self.scalers['minmax'] = MinMaxScaler()
+        
+        # Vectorizers
+        self.vectorizers['tfidf'] = TfidfVectorizer(max_features=1000)
+        
+        # Ensemble meta-model
+        self.ensembles['meta'] = RandomForestRegressor(n_estimators=50, random_state=42)
+        
+        self.stats['active_models'] = len(self.models)
+    
+    def create_deep_learning_models(self):
+        """ایجاد مدل‌های Deep Learning با TensorFlow"""
+        
+        # مدل ۱: شبکه عصبی عمیق برای طبقه‌بندی
+        dnn_classifier = keras.Sequential([
+            layers.Dense(256, activation='relu', input_shape=(100,)),
+            layers.Dropout(0.3),
+            layers.Dense(128, activation='relu'),
+            layers.Dropout(0.2),
+            layers.Dense(64, activation='relu'),
+            layers.Dense(32, activation='relu'),
+            layers.Dense(1, activation='sigmoid')
+        ])
+        
+        dnn_classifier.compile(
+            optimizer=optimizers.Adam(learning_rate=0.001),
+            loss='binary_crossentropy',
+            metrics=['accuracy', metrics.AUC()]
+        )
+        
+        self.models['dnn_classifier'] = dnn_classifier
+        
+        # مدل ۲: شبکه عصبی برای رگرسیون
+        dnn_regressor = keras.Sequential([
+            layers.Dense(256, activation='relu', input_shape=(100,)),
+            layers.Dropout(0.2),
+            layers.Dense(128, activation='relu'),
+            layers.Dense(64, activation='relu'),
+            layers.Dense(32, activation='relu'),
+            layers.Dense(1, activation='linear')
+        ])
+        
+        dnn_regressor.compile(
+            optimizer=optimizers.Adam(learning_rate=0.001),
+            loss='mse',
+            metrics=['mae']
+        )
+        
+        self.models['dnn_regressor'] = dnn_regressor
+        
+        # مدل ۳: LSTM برای داده‌های سری زمانی
+        lstm_model = keras.Sequential([
+            layers.LSTM(128, return_sequences=True, input_shape=(60, 10)),
+            layers.LSTM(64, return_sequences=True),
+            layers.LSTM(32),
+            layers.Dense(16, activation='relu'),
+            layers.Dense(1)
+        ])
+        
+        lstm_model.compile(
+            optimizer=optimizers.Adam(learning_rate=0.001),
+            loss='mse',
+            metrics=['mae']
+        )
+        
+        self.models['lstm'] = lstm_model
+        
+        # مدل ۴: CNN برای تشخیص الگو
+        cnn_model = keras.Sequential([
+            layers.Conv1D(64, 3, activation='relu', input_shape=(100, 1)),
+            layers.MaxPooling1D(2),
+            layers.Conv1D(128, 3, activation='relu'),
+            layers.GlobalAveragePooling1D(),
+            layers.Dense(64, activation='relu'),
+            layers.Dense(1)
+        ])
+        
+        cnn_model.compile(
+            optimizer=optimizers.Adam(learning_rate=0.001),
+            loss='mse'
+        )
+        
+        self.models['cnn'] = cnn_model
+    
+    # ==================== حافظه بلندمدت ====================
+    
+    def load_memory(self):
+        """بارگذاری حافظه از دیتابیس و فایل"""
+        try:
+            # بارگذاری از دیتابیس
+            if self.db:
+                memories = self.db.query(LearningMemory).filter(
+                    LearningMemory.last_seen >= datetime.utcnow() - timedelta(days=self.memory_retention_days)
+                ).all()
+                
+                for mem in memories:
+                    self.learning_memory.append({
+                        'pattern': mem.input_pattern,
+                        'output': mem.output_pattern,
+                        'confidence': mem.confidence,
+                        'success_rate': mem.success_rate,
+                        'occurrences': mem.occurrences,
+                        'last_seen': mem.last_seen
+                    })
+            
+            # بارگذاری از فایل
+            memory_file = MEMORY_DIR / 'ai_memory.pkl'
+            if memory_file.exists():
+                with open(memory_file, 'rb') as f:
+                    saved_memory = pickle.load(f)
+                    self.pattern_memory = saved_memory.get('patterns', [])
+                    self.correlation_memory = saved_memory.get('correlations', {})
+                    self.stats = saved_memory.get('stats', self.stats)
+            
+            logger.info(f"📚 Loaded {len(self.learning_memory)} memories, {len(self.pattern_memory)} patterns")
+            
+        except Exception as e:
+            logger.error(f"Error loading memory: {e}")
+    
+    def save_memory(self):
+        """ذخیره حافظه در فایل"""
+        try:
+            memory_file = MEMORY_DIR / 'ai_memory.pkl'
+            with open(memory_file, 'wb') as f:
+                pickle.dump({
+                    'patterns': self.pattern_memory[-10000:],  # نگه‌داری 10000 الگوی آخر
+                    'correlations': self.correlation_memory,
+                    'stats': self.stats
+                }, f)
+            
+            # ذخیره در دیتابیس
+            if self.db:
+                for mem in self.learning_memory[-100:]:  # 100 تای آخر
+                    db_mem = LearningMemory(
+                        memory_type='pattern',
+                        input_pattern=mem['pattern'],
+                        output_pattern=mem['output'],
+                        confidence=mem.get('confidence', 0.5),
+                        occurrences=mem.get('occurrences', 1),
+                        success_rate=mem.get('success_rate', 0.5),
+                        last_seen=datetime.utcnow()
+                    )
+                    self.db.add(db_mem)
+                
+                self.db.commit()
+            
+            logger.info("💾 Memory saved successfully")
+            
+        except Exception as e:
+            logger.error(f"Error saving memory: {e}")
+    
+    def learn_from_experience(self, prediction_data: Dict, actual_outcome: Any):
+        """یادگیری از نتایج واقعی"""
+        
+        # استخراج ویژگی‌ها
+        features = self.extract_features(prediction_data)
+        success = self.evaluate_success(prediction_data, actual_outcome)
+        
+        # ذخیره در حافظه
+        memory_item = {
+            'pattern': features,
+            'output': actual_outcome,
+            'success': success,
+            'timestamp': datetime.utcnow(),
+            'prediction_id': prediction_data.get('id')
+        }
+        
+        self.learning_memory.append(memory_item)
+        
+        # پیدا کردن الگوهای تکراری
+        self.find_patterns()
+        
+        # به‌روزرسانی آمار
+        self.stats['total_predictions'] += 1
+        if success:
+            self.stats['correct_predictions'] += 1
+        
+        self.stats['accuracy'] = self.stats['correct_predictions'] / max(1, self.stats['total_predictions'])
+        
+        # بازآموزی مدل‌ها
+        if self.auto_learn and len(self.learning_memory) % 100 == 0:
+            asyncio.create_task(self.retrain_models())
+        
+        # ذخیره حافظه
+        if len(self.learning_memory) % 1000 == 0:
+            self.save_memory()
+    
+    def find_patterns(self):
+        """پیدا کردن الگوهای تکراری در حافظه"""
+        
+        if len(self.learning_memory) < 10:
+            return
+        
+        # گروه‌بندی بر اساس ویژگی‌های مشابه
+        from sklearn.cluster import DBSCAN
+        
+        # استخراج feature vectors
+        X = []
+        for mem in self.learning_memory[-1000:]:  # 1000 تای آخر
+            if 'pattern' in mem and mem['pattern']:
+                # تبدیل به vector
+                vec = self._dict_to_vector(mem['pattern'])
+                X.append(vec)
+        
+        if len(X) < 10:
+            return
+        
+        X = np.array(X)
+        
+        # خوشه‌بندی
+        clustering = DBSCAN(eps=0.5, min_samples=3).fit(X)
+        
+        # پیدا کردن خوشه‌های معنی‌دار
+        unique_labels = set(clustering.labels_)
+        
+        for label in unique_labels:
+            if label == -1:  # نویز
+                continue
+            
+            cluster_mask = clustering.labels_ == label
+            cluster_size = np.sum(cluster_mask)
+            
+            if cluster_size >= 3:  # حداقل ۳ نمونه
+                cluster_data = [self.learning_memory[-1000:][i] for i in range(len(cluster_mask)) if cluster_mask[i]]
+                
+                # محاسبه نرخ موفقیت در خوشه
+                success_rate = np.mean([d.get('success', False) for d in cluster_data])
+                
+                if success_rate > 0.7:  # الگوی قابل اعتماد
+                    pattern_key = hashlib.md5(str(X[cluster_mask][0]).encode()).hexdigest()
+                    
+                    self.pattern_memory.append({
+                        'pattern_id': pattern_key,
+                        'features': X[cluster_mask][0].tolist(),
+                        'success_rate': success_rate,
+                        'occurrences': cluster_size,
+                        'first_seen': min(d.get('timestamp', datetime.utcnow()) for d in cluster_data),
+                        'last_seen': max(d.get('timestamp', datetime.utcnow()) for d in cluster_data)
+                    })
+        
+        self.stats['learned_patterns'] = len(self.pattern_memory)
+    
+    # ==================== پیش‌بینی با Ensemble ====================
+    
+    async def predict(self, input_data: Dict, prediction_type: str = 'general') -> Dict[str, Any]:
+        """
+        پیش‌بینی با ترکیب همه مدل‌ها
+        
+        Args:
+            input_data: داده‌های ورودی
+            prediction_type: نوع پیش‌بینی (crypto, sports, event, etc)
+        
+        Returns:
+            نتیجه پیش‌بینی با جزئیات کامل
+        """
+        
+        # استخراج ویژگی‌ها
+        features = self.extract_features(input_data)
+        feature_vector = self._dict_to_vector(features)
+        
+        # بررسی الگوهای مشابه در حافظه
+        memory_prediction = self.check_memory_patterns(feature_vector)
+        
+        # پیش‌بینی با عددشناسی
+        numerology_prediction = self.get_numerology_prediction(input_data, prediction_type)
+        
+        # پیش‌بینی با مدل‌های ML
+        ml_predictions = await self.get_ml_predictions(feature_vector, prediction_type)
+        
+        # پیش‌بینی با Deep Learning
+        dl_predictions = self.get_deep_learning_predictions(feature_vector)
+        
+        # پیش‌بینی با سری زمانی (اگر适用 باشه)
+        time_series_prediction = await self.get_time_series_prediction(input_data)
+        
+        # ترکیب همه پیش‌بینی‌ها (Ensemble)
+        ensemble_result = self.ensemble_predictions([
+            ('memory', memory_prediction),
+            ('numerology', numerology_prediction),
+            ('ml', ml_predictions),
+            ('dl', dl_predictions),
+            ('timeseries', time_series_prediction)
+        ])
+        
+        # محاسبه ضریب اطمینان
+        confidence = self.calculate_confidence(ensemble_result)
+        
+        # تفسیر نتیجه
+        interpretation = self.generate_interpretation(ensemble_result, input_data)
+        
+        result = {
+            'prediction': ensemble_result['value'],
+            'probability': ensemble_result['probability'],
+            'confidence': confidence,
+            'confidence_level': self.get_confidence_level(confidence),
+            'recommendation': self.generate_recommendation(ensemble_result),
+            'ensemble_details': ensemble_result['details'],
+            'numerology_component': numerology_prediction,
+            'ml_component': ml_predictions,
+            'memory_component': memory_prediction,
+            'interpretation': interpretation,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+        return result
+    
+    def extract_features(self, input_data: Dict) -> Dict[str, float]:
+        """استخراج ویژگی‌های عددی از داده‌های ورودی"""
+        features = {}
+        
+        # ویژگی‌های پایه
+        if 'token_address' in input_data:
+            addr = input_data['token_address']
+            features['addr_length'] = len(addr)
+            features['addr_digits'] = sum(c.isdigit() for c in addr)
+            features['addr_hex_sum'] = sum(int(c, 16) if c.isdigit() else ord(c) % 16 for c in addr if c.isalnum())
+        
+        if 'price' in input_data:
+            features['price'] = float(input_data['price'])
+        
+        if 'volume' in input_data:
+            features['volume'] = float(input_data['volume'])
+        
+        if 'market_cap' in input_data:
+            features['market_cap'] = float(input_data['market_cap'])
+        
+        # ویژگی‌های زمانی
+        now = datetime.now()
+        features['hour'] = now.hour
+        features['day'] = now.day
+        features['month'] = now.month
+        features['year'] = now.year
+        features['weekday'] = now.weekday()
+        
+        # ویژگی‌های عددشناسی
+        if 'name' in input_data:
+            name_num = self.numerology.calculate_name_number(input_data['name'])
+            features['name_number'] = name_num.get('expression', 0)
+        
+        if 'birth_date' in input_data:
+            life_path = self.numerology.calculate_life_path(input_data['birth_date'])
+            features['life_path'] = life_path['primary_number']
+        
+        return features
+    
+    def _dict_to_vector(self, d: Dict) -> np.ndarray:
+        """تبدیل دیکشنری به بردار عددی"""
+        # مقادیر پیش‌فرض برای ویژگی‌های missing
+        default_values = {
+            'addr_length': 42,
+            'addr_digits': 10,
+            'addr_hex_sum': 100,
+            'price': 0,
+            'volume': 0,
+            'market_cap': 0,
+            'hour': 0,
+            'day': 1,
+            'month': 1,
+            'year': 2024,
+            'weekday': 0,
+            'name_number': 5,
+            'life_path': 5
+        }
+        
+        vector = []
+        for key, default in default_values.items():
+            vector.append(float(d.get(key, default)))
+        
+        return np.array(vector)
+    
+    def check_memory_patterns(self, feature_vector: np.ndarray) -> Dict[str, Any]:
+        """بررسی الگوهای مشابه در حافظه"""
+        if not self.pattern_memory:
+            return {'exists': False, 'prediction': None, 'confidence': 0}
+        
+        best_match = None
+        best_similarity = 0
+        
+        for pattern in self.pattern_memory[-1000:]:  # 1000 الگوی آخر
+            pattern_vec = np.array(pattern['features'])
+            similarity = 1 - np.linalg.norm(feature_vector - pattern_vec) / np.linalg.norm(pattern_vec)
+            
+            if similarity > best_similarity and similarity > 0.8:  # شباهت بیش از 80%
+                best_similarity = similarity
+                best_match = pattern
+        
+        if best_match:
+            return {
+                'exists': True,
+                'prediction': best_match.get('success_rate', 0.5),
+                'confidence': best_similarity,
+                'pattern_id': best_match.get('pattern_id'),
+                'occurrences': best_match.get('occurrences', 1)
+            }
+        
+        return {'exists': False, 'prediction': None, 'confidence': 0}
+    
+    def get_numerology_prediction(self, input_data: Dict, pred_type: str) -> Dict[str, Any]:
+        """پیش‌بینی بر اساس عددشناسی"""
+        
+        if pred_type == 'crypto':
+            # تحلیل عددی آدرس توکن
+            if 'token_address' in input_data:
+                addr_analysis = self.numerology.analyze_token_address(input_data['token_address'])
+                number = addr_analysis.get('reduced_number', 5)
+                
+                # امتیاز بر اساس عدد
+                if number in [8, 9]:
+                    score = 0.8  # اعداد قدرت
+                elif number in [3, 6]:
+                    score = 0.6  # اعداد تعادل
+                elif number in [4, 5]:
+                    score = 0.5  # اعداد میانه
+                else:
+                    score = 0.4
+                
+                return {
+                    'value': score,
+                    'number': number,
+                    'analysis': addr_analysis,
+                    'interpretation': f"Token number {number}: {addr_analysis.get('interpretation', '')}"
+                }
+        
+        elif pred_type == 'sports':
+            # تحلیل عددی نام تیم‌ها
+            if 'team1' in input_data and 'team2' in input_data:
+                team1_num = self.numerology.calculate_name_number(input_data['team1'])
+                team2_num = self.numerology.calculate_name_number(input_data['team2'])
+                
+                n1 = team1_num.get('expression', 5)
+                n2 = team2_num.get('expression', 5)
+                
+                # مقایسه
+                if n1 > n2:
+                    score = 0.6 + (n1 - n2) / 20
+                elif n2 > n1:
+                    score = 0.4 - (n2 - n1) / 20
+                else:
+                    score = 0.5
+                
+                return {
+                    'value': min(max(score, 0), 1),
+                    'team1_number': n1,
+                    'team2_number': n2,
+                    'interpretation': f"Team1: {n1}, Team2: {n2}"
+                }
+        
+        elif pred_type == 'event':
+            # تحلیل عددی تاریخ رویداد
+            if 'event_date' in input_data:
+                date_num = self.numerology.calculate_life_path(input_data['event_date'])
+                number = date_num['primary_number']
+                
+                # اعداد خوش‌یمن برای رویداد
+                lucky_events = [1, 3, 6, 8, 9]
+                score = 0.7 if number in lucky_events else 0.5
+                
+                return {
+                    'value': score,
+                    'number': number,
+                    'interpretation': f"Event date number {number}"
+                }
+        
+        # پیش‌فرض
+        return {'value': 0.5, 'interpretation': 'Neutral numerology'}
+    
+    async def get_ml_predictions(self, feature_vector: np.ndarray, pred_type: str) -> Dict[str, Any]:
+        """پیش‌بینی با مدل‌های Machine Learning"""
+        
+        predictions = {}
+        weights = {}
+        
+        feature_vector = feature_vector.reshape(1, -1)
+        
+        for name, model in self.models.items():
+            if name in ['dnn_classifier', 'dnn_regressor', 'lstm', 'cnn', 'prophet']:
+                continue  # اینها deep learning هستند
+            
+            try:
+                if hasattr(model, 'predict_proba'):
+                    pred = model.predict_proba(feature_vector)[0][1]
+                elif hasattr(model, 'predict'):
+                    pred = model.predict(feature_vector)[0]
+                else:
+                    continue
+                
+                # نرمال‌سازی به بازه 0-1
+                if isinstance(pred, np.ndarray):
+                    pred = float(pred[0]) if len(pred) > 0 else 0.5
+                else:
+                    pred = float(pred)
+                
+                pred = max(0, min(1, pred))
+                
+                predictions[name] = pred
+                
+                # وزن بر اساس دقت قبلی
+                weights[name] = self.get_model_weight(name)
+                
+            except Exception as e:
+                logger.debug(f"Model {name} prediction failed: {e}")
+                continue
+        
+        if not predictions:
+            return {'value': 0.5, 'models_used': 0}
+        
+        # میانگین وزنی
+        weighted_sum = sum(predictions[n] * weights.get(n, 1) for n in predictions)
+        total_weight = sum(weights.get(n, 1) for n in predictions)
+        
+        ensemble_value = weighted_sum / total_weight if total_weight > 0 else np.mean(list(predictions.values()))
+        
+        return {
+            'value': float(ensemble_value),
+            'models_used': len(predictions),
+            'individual': predictions,
+            'variance': float(np.var(list(predictions.values())))
+        }
+    
+    def get_deep_learning_predictions(self, feature_vector: np.ndarray) -> Dict[str, Any]:
+        """پیش‌بینی با مدل‌های Deep Learning"""
+        
+        predictions = {}
+        
+        # آماده‌سازی برای DNN
+        X_dnn = feature_vector.reshape(1, -1)
+        
+        # DNN Classifier
+        if 'dnn_classifier' in self.models:
+            try:
+                pred = self.models['dnn_classifier'].predict(X_dnn)[0][0]
+                predictions['dnn'] = float(pred)
+            except:
+                pass
+        
+        # آماده‌سازی برای LSTM (نیاز به reshape متفاوت)
+        if 'lstm' in self.models and len(feature_vector[0]) >= 60:
+            try:
+                X_lstm = feature_vector.reshape(1, 60, -1)
+                pred = self.models['lstm'].predict(X_lstm)[0][0]
+                predictions['lstm'] = float(pred)
+            except:
+                pass
+        
+        # آماده‌سازی برای CNN
+        if 'cnn' in self.models:
+            try:
+                X_cnn = feature_vector.reshape(1, -1, 1)
+                pred = self.models['cnn'].predict(X_cnn)[0][0]
+                predictions['cnn'] = float(pred)
+            except:
+                pass
+        
+        if not predictions:
+            return {'value': 0.5, 'models_used': 0}
+        
+        return {
+            'value': float(np.mean(list(predictions.values()))),
+            'models_used': len(predictions),
+            'individual': predictions
+        }
+    
+    async def get_time_series_prediction(self, input_data: Dict) -> Dict[str, Any]:
+        """پیش‌بینی با مدل‌های سری زمانی"""
+        
+        # این بخش به داده‌های تاریخی نیاز دارد
+        # در این نسخه ساده شده
+        return {'value': 0.5, 'method': 'not_available'}
+    
+    def ensemble_predictions(self, predictions: List[Tuple[str, Dict]]) -> Dict[str, Any]:
+        """ترکیب چند پیش‌بینی با روش‌های مختلف"""
+        
+        valid_predictions = []
+        weights = []
+        details = {}
+        
+        # وزن‌دهی به هر منبع
+        weight_map = {
+            'memory': 0.3,
+            'numerology': 0.25,
+            'ml': 0.25,
+            'dl': 0.15,
+            'timeseries': 0.05
+        }
+        
+        for source, pred in predictions:
+            if pred and 'value' in pred:
+                value = pred['value']
+                if isinstance(value, (int, float)) and 0 <= value <= 1:
+                    valid_predictions.append(value)
+                    weights.append(weight_map.get(source, 0.2))
+                    details[source] = {
+                        'value': value,
+                        'weight': weight_map.get(source, 0.2),
+                        'details': {k: v for k, v in pred.items() if k != 'value'}
+                    }
+        
+        if not valid_predictions:
+            return {
+                'value': 0.5,
+                'probability': 0.5,
+                'details': {},
+                'method': 'default'
+            }
+        
+        # روش‌های مختلف ترکیب
+        weights = np.array(weights) / sum(weights)
+        
+        # 1. میانگین وزنی
+        weighted_avg = np.average(valid_predictions, weights=weights)
+        
+        # 2. میانه
+        median = np.median(valid_predictions)
+        
+        # 3. ترکیب
+        if len(valid_predictions) >= 3:
+            # حذف پرت‌ها
+            q1, q3 = np.percentile(valid_predictions, [25, 75])
+            iqr = q3 - q1
+            filtered = [p for p in valid_predictions if q1 - 1.5*iqr <= p <= q3 + 1.5*iqr]
+            trimmed_mean = np.mean(filtered) if filtered else weighted_avg
+        else:
+            trimmed_mean = weighted_avg
+        
+        # انتخاب بهترین روش
+        if np.std(valid_predictions) < 0.1:
+            # اجماع بالا - از میانگین وزنی استفاده کن
+            final = weighted_avg
+            method = 'weighted_avg (high consensus)'
+        else:
+            # اختلاف بالا - از trimmed mean استفاده کن
+            final = trimmed_mean
+            method = 'trimmed_mean (low consensus)'
+        
+        # محاسبه احتمال (برای binary predictions)
+        probability = final
+        
+        return {
+            'value': float(final),
+            'probability': float(probability),
+            'method': method,
+            'consensus': float(1 - np.std(valid_predictions)),
+            'details': details,
+            'all_predictions': valid_predictions
+        }
+    
+    def calculate_confidence(self, ensemble_result: Dict) -> float:
+        """محاسبه ضریب اطمینان پیش‌بینی"""
+        
+        confidence = 0.5  # پایه
+        
+        # فاکتور ۱: اجماع بین مدل‌ها
+        if 'consensus' in ensemble_result:
+            confidence += ensemble_result['consensus'] * 0.3
+        
+        # فاکتور ۲: تعداد مدل‌های موفق
+        details = ensemble_result.get('details', {})
+        num_sources = len(details)
+        confidence += min(num_sources * 0.05, 0.2)
+        
+        # فاکتور ۳: وجود الگو در حافظه
+        if 'memory' in details and details['memory'].get('exists', False):
+            confidence += 0.15
+        
+        # فاکتور ۴: تطابق با عددشناسی
+        if 'numerology' in details:
+            confidence += 0.05
+        
+        # محدود به 0-1
+        return min(max(confidence, 0), 1)
+    
+    def get_confidence_level(self, confidence: float) -> str:
+        """تبدیل عدد به سطح اطمینان متنی"""
+        if confidence >= 0.9:
+            return "🔮 Absolute Certainty"
+        elif confidence >= 0.8:
+            return "✨ Very High Confidence"
+        elif confidence >= 0.7:
+            return "⭐ High Confidence"
+        elif confidence >= 0.6:
+            return "📊 Moderate Confidence"
+        elif confidence >= 0.5:
+            return "📈 Slight Edge"
+        else:
+            return "⚠️ Low Confidence"
+    
+    def generate_recommendation(self, ensemble_result: Dict) -> str:
+        """تولید توصیه بر اساس پیش‌بینی"""
+        
+        value = ensemble_result.get('value', 0.5)
+        
+        if value >= 0.8:
+            return "🚀 STRONG BUY - Exceptional opportunity"
+        elif value >= 0.7:
+            return "📈 BUY - Positive outlook"
+        elif value >= 0.6:
+            return "👀 WATCH - Monitor closely"
+        elif value >= 0.4:
+            return "⏸️ HOLD - Wait for clearer signals"
+        else:
+            return "🛑 AVOID - Negative indicators"
+    
+    def generate_interpretation(self, ensemble_result: Dict, input_data: Dict) -> str:
+        """تولید تفسیر انسانی از پیش‌بینی"""
+        
+        value = ensemble_result.get('value', 0.5)
+        confidence = ensemble_result.get('confidence', 0.5)
+        
+        interpretations = []
+        
+        # تفسیر بر اساس مقدار
+        if value >= 0.8:
+            interpretations.append("The cosmic alignment is exceptionally favorable.")
+        elif value >= 0.7:
+            interpretations.append("The stars are aligned in your favor.")
+        elif value >= 0.6:
+            interpretations.append("There is positive energy surrounding this.")
+        elif value >= 0.4:
+            interpretations.append("The outcome is balanced - neither strongly favorable nor unfavorable.")
+        else:
+            interpretations.append("The cosmic energies suggest caution.")
+        
+        # تفسیر بر اساس اطمینان
+        if confidence >= 0.8:
+            interpretations.append("The signs are clear and unambiguous.")
+        elif confidence >= 0.6:
+            interpretations.append("Multiple indicators point in the same direction.")
+        else:
+            interpretations.append("The signals are mixed - trust your intuition.")
+        
+        # اضافه کردن عددشناسی
+        if 'numerology' in ensemble_result.get('details', {}):
+            num_data = ensemble_result['details']['numerology']
+            if 'interpretation' in num_data:
+                interpretations.append(f"Numerology reveals: {num_data['interpretation']}")
+        
+        return " ".join(interpretations)
+    
+    def get_model_weight(self, model_name: str) -> float:
+        """دریافت وزن مدل بر اساس عملکرد قبلی"""
+        # اینجا می‌تونه از دیتابیس بیاد
+        base_weights = {
+            'rf_classifier': 1.2,
+            'gb_classifier': 1.1,
+            'svm_classifier': 1.0,
+            'mlp_classifier': 0.9,
+            'xgb_classifier': 1.3,
+            'lgb_classifier': 1.2,
+            'ada_boost': 0.8
+        }
+        return base_weights.get(model_name, 1.0)
+    
+    # ==================== آموزش مدل‌ها ====================
+    
+    async def retrain_models(self):
+        """بازآموزی همه مدل‌ها با داده‌های جدید"""
+        
+        logger.info("🔄 Starting model retraining...")
+        
+        if len(self.learning_memory) < 100:
+            logger.info("Not enough data for retraining")
+            return
+        
+        # آماده‌سازی داده‌ها
+        X, y = self.prepare_training_data()
+        
+        if len(X) < 50:
+            return
+        
+        # تقسیم داده‌ها
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
+        
+        # آموزش هر مدل
+        for name, model in self.models.items():
+            if name in ['prophet', 'lstm', 'cnn']:
+                continue  # اینها نیاز به داده خاص دارند
+            
+            try:
+                if hasattr(model, 'fit'):
+                    model.fit(X_train, y_train)
+                    
+                    # ارزیابی
+                    if hasattr(model, 'score'):
+                        train_score = model.score(X_train, y_train)
+                        test_score = model.score(X_test, y_test)
+                        
+                        logger.info(f"✅ {name}: train={train_score:.3f}, test={test_score:.3f}")
+                        
+                        # به‌روزرسانی وزن
+                        self.update_model_weight(name, test_score)
+                        
+            except Exception as e:
+                logger.error(f"Error training {name}: {e}")
+        
+        # آموزش meta-model برای ensemble
+        self.train_ensemble_meta(X_train, y_train, X_test, y_test)
+        
+        # آموزش Deep Learning models
+        self.train_deep_learning(X_train, y_train, X_test, y_test)
+        
+        self.stats['last_training'] = datetime.utcnow()
+        logger.info("✅ Model retraining completed")
+        
+        # ذخیره مدل‌ها
+        self.save_models()
+    
+    def prepare_training_data(self) -> Tuple[np.ndarray, np.ndarray]:
+        """آماده‌سازی داده‌های آموزشی"""
+        
+        X = []
+        y = []
+        
+        for mem in self.learning_memory[-5000:]:  # 5000 تای آخر
+            if 'pattern' in mem and 'success' in mem:
+                vec = self._dict_to_vector(mem['pattern'])
+                X.append(vec)
+                y.append(1.0 if mem['success'] else 0.0)
+        
+        return np.array(X), np.array(y)
+    
+    def update_model_weight(self, model_name: str, score: float):
+        """به‌روزرسانی وزن مدل بر اساس عملکرد"""
+        # اینجا می‌تونه در دیتابیس ذخیره کنه
+        pass
+    
+    def train_ensemble_meta(self, X_train, y_train, X_test, y_test):
+        """آموزش meta-model برای ترکیب پیش‌بینی‌ها"""
+        
+        # جمع‌آوری پیش‌بینی‌های همه مدل‌ها
+        meta_features_train = []
+        
+        for i in range(len(X_train)):
+            row_preds = []
+            for name, model in self.models.items():
+                if hasattr(model, 'predict'):
+                    try:
+                        pred = model.predict([X_train[i]])[0]
+                        row_preds.append(pred)
+                    except:
+                        row_preds.append(0.5)
+            
+            if len(row_preds) == len([m for m in self.models if hasattr(m, 'predict')]):
+                meta_features_train.append(row_preds)
+        
+        if len(meta_features_train) > 10:
+            meta_features_train = np.array(meta_features_train)
+            y_train_meta = y_train[:len(meta_features_train)]
+            
+            self.ensembles['meta'].fit(meta_features_train, y_train_meta)
+            logger.info("✅ Meta-ensemble trained")
+    
+    def train_deep_learning(self, X_train, y_train, X_test, y_test):
+        """آموزش مدل‌های Deep Learning"""
+        
+        # DNN Classifier
+        if 'dnn_classifier' in self.models:
+            early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+            
+            history = self.models['dnn_classifier'].fit(
+                X_train, y_train,
+                validation_data=(X_test, y_test),
+                epochs=50,
+                batch_size=32,
+                callbacks=[early_stop],
+                verbose=0
+            )
+            
+            logger.info(f"✅ DNN trained: loss={history.history['loss'][-1]:.4f}")
+        
+        # آماده‌سازی برای LSTM
+        if 'lstm' in self.models and len(X_train) >= 60:
+            # تبدیل به فرمت LSTM
+            X_lstm_train = X_train.reshape(-1, 60, X_train.shape[1] // 60)
+            X_lstm_test = X_test.reshape(-1, 60, X_test.shape[1] // 60)
+            
+            self.models['lstm'].fit(
+                X_lstm_train, y_train[:len(X_lstm_train)],
+                validation_data=(X_lstm_test, y_test[:len(X_lstm_test)]),
+                epochs=30,
+                batch_size=16,
+                verbose=0
+            )
+            
+            logger.info("✅ LSTM trained")
+        
+        # آماده‌سازی برای CNN
+        if 'cnn' in self.models:
+            X_cnn_train = X_train.reshape(-1, X_train.shape[1], 1)
+            X_cnn_test = X_test.reshape(-1, X_test.shape[1], 1)
+            
+            self.models['cnn'].fit(
+                X_cnn_train, y_train,
+                validation_data=(X_cnn_test, y_test),
+                epochs=30,
+                batch_size=32,
+                verbose=0
+            )
+            
+            logger.info("✅ CNN trained")
+    
+    # ==================== تحلیل احساسات ====================
+    
+    def analyze_sentiment(self, text: str) -> Dict[str, float]:
+        """تحلیل احساسات متن با ۳ روش مختلف"""
+        
+        results = {}
+        
+        # روش ۱: VADER
+        vader_scores = self.sentiment_analyzer.polarity_scores(text)
+        results['vader'] = {
+            'positive': vader_scores['pos'],
+            'negative': vader_scores['neg'],
+            'neutral': vader_scores['neu'],
+            'compound': vader_scores['compound']
+        }
+        
+        # روش ۲: TextBlob
+        blob = TextBlob(text)
+        results['textblob'] = {
+            'polarity': blob.sentiment.polarity,
+            'subjectivity': blob.sentiment.subjectivity
+        }
+        
+        # روش ۳: ترکیب
+        combined = (vader_scores['compound'] + blob.sentiment.polarity) / 2
+        results['combined'] = combined
+        
+        # نرمال‌سازی به 0-1
+        results['normalized'] = (combined + 1) / 2
+        
+        return results
+    
+    def analyze_social_sentiment(self, texts: List[str]) -> Dict[str, Any]:
+        """تحلیل احساسات جمعی"""
+        
+        sentiments = []
+        for text in texts[:100]:  # محدود به 100 متن
+            sent = self.analyze_sentiment(text)['normalized']
+            sentiments.append(sent)
+        
+        if not sentiments:
+            return {
+                'average': 0.5,
+                'std': 0,
+                'trend': 'neutral',
+                'volume': 0
+            }
+        
+        avg_sentiment = np.mean(sentiments)
+        std_sentiment = np.std(sentiments)
+        
+        # تشخیص trend
+        if avg_sentiment > 0.6:
+            trend = 'very_positive'
+        elif avg_sentiment > 0.55:
+            trend = 'positive'
+        elif avg_sentiment < 0.4:
+            trend = 'very_negative'
+        elif avg_sentiment < 0.45:
+            trend = 'negative'
+        else:
+            trend = 'neutral'
+        
+        return {
+            'average': float(avg_sentiment),
+            'std': float(std_sentiment),
+            'trend': trend,
+            'volume': len(sentiments),
+            'confidence': float(1 - std_sentiment)
+        }
+    
+    # ==================== ذخیره و بارگذاری مدل‌ها ====================
+    
+    def save_models(self):
+        """ذخیره مدل‌های آموزش دیده"""
+        
+        model_dir = MODELS_DIR
+        model_dir.mkdir(exist_ok=True)
+        
+        for name, model in self.models.items():
+            if name in ['dnn_classifier', 'dnn_regressor', 'lstm', 'cnn']:
+                # ذخیره مدل‌های Keras
+                try:
+                    model.save(str(model_dir / f"{name}.h5"))
+                except:
+                    pass
+            elif name == 'prophet':
+                # ذخیره Prophet
+                try:
+                    with open(model_dir / f"{name}.json", 'w') as f:
+                        f.write(model_to_json(model))
+                except:
+                    pass
+            else:
+                # ذخیره مدل‌های scikit-learn
+                try:
+                    with open(model_dir / f"{name}.pkl", 'wb') as f:
+                        pickle.dump(model, f)
+                except:
+                    pass
+        
+        logger.info("💾 Models saved successfully")
+    
+    def load_models(self):
+        """بارگذاری مدل‌های ذخیره شده"""
+        
+        model_dir = MODELS_DIR
+        
+        if not model_dir.exists():
+            return
+        
+        for model_file in model_dir.glob("*.pkl"):
+            try:
+                name = model_file.stem
+                with open(model_file, 'rb') as f:
+                    self.models[name] = pickle.load(f)
+                logger.info(f"📥 Loaded model: {name}")
+            except Exception as e:
+                logger.error(f"Error loading {model_file}: {e}")
+        
+        for model_file in model_dir.glob("*.h5"):
+            try:
+                name = model_file.stem
+                self.models[name] = keras.models.load_model(str(model_file))
+                logger.info(f"📥 Loaded Keras model: {name}")
+            except Exception as e:
+                logger.error(f"Error loading {model_file}: {e}")
+        
+        for model_file in model_dir.glob("*.json"):
+            if model_file.stem == 'prophet':
+                try:
+                    with open(model_file, 'r') as f:
+                        self.models['prophet'] = model_from_json(f.read())
+                    logger.info("📥 Loaded Prophet model")
+                except:
+                    pass
+    
+    # ==================== APIهای خارجی ====================
+    
+    async def fetch_external_data(self, url: str, params: Dict = None) -> Optional[Dict]:
+        """دریافت داده از APIهای خارجی"""
+        
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(url, params=params, timeout=10) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        logger.warning(f"API error {response.status}: {url}")
+                        return None
+            except Exception as e:
+                logger.error(f"Error fetching {url}: {e}")
+                return None
+    
+    async def get_crypto_news_sentiment(self, symbol: str) -> Dict[str, Any]:
+        """دریافت و تحلیل اخبار کریپتو"""
+        
+        url = "https://newsapi.org/v2/everything"
+        params = {
+            'q': f'cryptocurrency {symbol}',
+            'apiKey': NEWS_API_KEY,
+            'language': 'en',
+            'sortBy': 'publishedAt',
+            'pageSize': 10
+        }
+        
+        data = await self.fetch_external_data(url, params)
+        
+        if not data or 'articles' not in data:
+            return {'sentiment': 0.5, 'articles': []}
+        
+        articles = data['articles'][:5]  # 5 خبر آخر
+        sentiments = []
+        
+        for article in articles:
+            title = article.get('title', '')
+            description = article.get('description', '') or ''
+            text = f"{title} {description}"
+            
+            sentiment = self.analyze_sentiment(text)['normalized']
+            sentiments.append(sentiment)
+        
+        avg_sentiment = np.mean(sentiments) if sentiments else 0.5
+        
+        return {
+            'sentiment': float(avg_sentiment),
+            'article_count': len(articles),
+            'articles': articles[:3]  # ۳ خبر اول
+        }
+    
+    # ==================== گزارش و آمار ====================
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """گرفتن آمار هوش مصنوعی"""
+        
+        return {
+            'total_predictions': self.stats['total_predictions'],
+            'accuracy': f"{self.stats['accuracy']*100:.1f}%",
+            'learned_patterns': self.stats['learned_patterns'],
+            'active_models': self.stats['active_models'],
+            'memory_size': len(self.learning_memory),
+            'pattern_memory': len(self.pattern_memory),
+            'last_training': self.stats['last_training'].isoformat() if self.stats['last_training'] else 'Never',
+            'confidence_threshold': self.confidence_threshold
+        }
+    
+    def get_model_performance(self) -> Dict[str, float]:
+        """عملکرد هر مدل"""
+        
+        performance = {}
+        
+        # اینجا می‌تونه cross-validation انجام بده
+        for name in self.models:
+            performance[name] = 0.7  # placeholder
+        
+        return performance

@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  oracle-bot:
+    build: .
+    container_name: ultimate-oracle-bot
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./memory:/app/memory
+      - ./backups:/app/backups
+    environment:
+      - TZ=UTC
+      - PYTHONUNBUFFERED=1
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
