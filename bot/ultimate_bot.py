@@ -1259,7 +1259,7 @@ class UltimateBot:
         app = Application.builder().token(TELEGRAM_TOKEN).build()
                 # راه‌اندازی webhook server در thread جدا
         webhook_thread = threading.Thread(target=self._run_webhook_server, daemon=True)
-                webhook_thread.start()
+        webhook_thread.start()
 
         
         # هندلرها
