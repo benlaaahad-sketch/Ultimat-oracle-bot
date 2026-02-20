@@ -3,7 +3,7 @@
 
 """
 The Ultimate Oracle Bot - Main Entry Point
-Version: 1.0.0 (pandas-free)
+Version: 1.0.0
 """
 
 import os
@@ -14,6 +14,17 @@ from pathlib import Path
 # تنظیم مسیر
 sys.path.append(str(Path(__file__).parent))
 
+# تلاش برای import ماژول‌ها
+try:
+    from bot.ultimate_bot import UltimateBot
+    from database.models import init_database
+    from utils.logger import setup_logger
+    from config import *
+except ImportError as e:
+    print(f"❌ Import error: {e}")
+    print("📝 Make sure all files are created correctly")
+    sys.exit(1)
+
 # تنظیم لاگ
 logging.basicConfig(
     level=logging.INFO,
@@ -22,122 +33,50 @@ logging.basicConfig(
 )
 logger = logging.getLogger('main')
 
-# ==================== ایمپورت‌ها ====================
-
-try:
-    # ابتدا کتابخونه‌های اصلی
-    from bot.ultimate_bot import UltimateBot
-    from database.models import init_database
-    from config import *
-    
-    # تلاش برای ایمپورت logger (اگه وجود داشت)
+def create_initial_backup():
+    """ایجاد پشتیبان اولیه قبل از اجرا"""
     try:
-        from utils.logger import setup_logger
-        logger = setup_logger('main')
-    except ImportError:
-        print("⚠️ Logger module not found, using basic logging")
-    
-    # pandas غیرفعال - به جای اون از numpy و csv استفاده می‌کنیم
-    HAS_PANDAS = False
-    print("📊 Running in pandas-free mode (numpy + csv will be used)")
-    
-except ImportError as e:
-    print(f"❌ Critical import error: {e}")
-    print("📝 Please install required packages:")
-    print("   pip install python-telegram-bot sqlalchemy requests aiohttp beautifulsoup4 python-dateutil")
-    sys.exit(1)
-
-# ==================== توابع کمکی ====================
-
-def check_environment():
-    """بررسی محیط اجرا"""
-    
-    print("\n" + "="*60)
-    print("🚀 The Ultimate Oracle Bot")
-    print("="*60)
-    
-    # پایتون
-    print(f"🐍 Python: {sys.version.split()[0]}")
-    
-    # کتابخونه‌های نصب شده
-    installed = []
-    missing = []
-    
-    required = [
-        ('telegram', 'python-telegram-bot'),
-        ('sqlalchemy', 'sqlalchemy'),
-        ('requests', 'requests'),
-        ('aiohttp', 'aiohttp'),
-        ('bs4', 'beautifulsoup4'),
-        ('dateutil', 'python-dateutil')
-    ]
-    
-    for module, package in required:
-        try:
-            __import__(module)
-            installed.append(package)
-        except ImportError:
-            missing.append(package)
-    
-    if installed:
-        print(f"✅ Installed: {', '.join(installed)}")
-    
-    if missing:
-        print(f"❌ Missing: {', '.join(missing)}")
-        print("   Run: pip install " + ' '.join(missing))
-        return False
-    
-    return True
-
-def create_directories():
-    """ایجاد پوشه‌های مورد نیاز"""
-    
-    dirs = ['data', 'logs', 'memory', 'backups']
-    for d in dirs:
-        Path(d).mkdir(exist_ok=True)
-        print(f"📁 Directory '{d}/' checked")
-
-# ==================== تابع اصلی ====================
+        from utils.backup_manager import BackupManager
+        bm = BackupManager()
+        backup = bm.create_backup("initial_setup")
+        if backup['success']:
+            logger.info(f"✅ Initial backup created: {backup['file']} ({backup['size_mb']} MB)")
+        else:
+            logger.warning("⚠️ Initial backup failed")
+    except Exception as e:
+        logger.error(f"❌ Backup error: {e}")
 
 def main():
     """نقطه ورود اصلی"""
     
+    logger.info("="*60)
+    logger.info("🚀 Starting The Ultimate Oracle Bot")
+    logger.info("="*60)
+    
     try:
-        # بررسی محیط
-        if not check_environment():
-            print("\n❌ Environment check failed")
-            return
-        
-        # ایجاد پوشه‌ها
-        print("\n📁 Checking directories...")
-        create_directories()
+        # ایجاد پشتیبان اولیه
+        logger.info("📦 Creating initial backup...")
+        create_initial_backup()
         
         # راه‌اندازی دیتابیس
-        print("\n🗄️ Initializing database...")
+        logger.info("🗄️ Initializing database...")
         init_database()
         
         # ایجاد ربات
-        print("\n🤖 Creating bot instance...")
+        logger.info("🤖 Creating bot instance...")
         bot = UltimateBot()
         
         # اجرا
-        print("\n✅ Bot is ready! Press Ctrl+C to stop")
-        print("="*60 + "\n")
-        
+        logger.info("✅ Bot is ready! Press Ctrl+C to stop")
         bot.run()
         
     except KeyboardInterrupt:
-        print("\n👋 Bot stopped by user")
+        logger.info("👋 Bot stopped by user")
     except Exception as e:
-        print(f"\n❌ Fatal error: {e}")
-        import traceback
-        traceback.print_exc()
-        return 1
+        logger.error(f"❌ Fatal error: {e}", exc_info=True)
+        sys.exit(1)
     
-    print("\n" + "="*60)
-    return 0
-
-# ==================== اجرا ====================
+    logger.info("="*60)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
