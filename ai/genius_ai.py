@@ -63,11 +63,11 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer as VaderAna
 import re
 
 # Transformers (برای مدل‌های زبانی پیشرفته)
-from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification, AutoModel
-
-# Prophet برای پیش‌بینی سری زمانی
-from prophet import Prophet
-from prophet.serialize import model_to_json, model_from_json
+# from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification, AutoModel
+# 
+# # Prophet برای پیش‌بینی سری زمانی
+# from prophet import Prophet
+# from prophet.serialize import model_to_json, model_from_json
 
 # Stats
 import statsmodels.api as sm
