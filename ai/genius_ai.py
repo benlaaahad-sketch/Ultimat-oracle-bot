@@ -57,7 +57,7 @@ from sklearn.decomposition import PCA
 
 # NLP
 # import nltk
-from nltk.sentiment import SentimentIntensityAnalyzer
+# from nltk.sentiment import SentimentIntensityAnalyzer
 # from textblob import TextBlob
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer as VaderAnalyzer
 import re
