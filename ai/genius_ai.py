@@ -51,9 +51,9 @@ from sklearn.decomposition import PCA
 
 # Deep Learning
 # import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers, models, optimizers, losses, metrics
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+# from tensorflow import keras
+# from tensorflow.keras import layers, models, optimizers, losses, metrics
+# from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 # NLP
 # import nltk
