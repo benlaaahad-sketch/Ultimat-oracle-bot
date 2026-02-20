@@ -13,9 +13,8 @@ class HealthHandler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
         self.wfile.write(b'OK')
-        logger.info("✅ Healthcheck OK")
     
-    def log_message(self, format, *args):
+    def log_message(self, *args):
         pass
 
 def run_health():
@@ -24,11 +23,10 @@ def run_health():
     logger.info(f"✅ Health server on port {port}")
     server.serve_forever()
 
-# راه‌اندازی healthcheck
 thread = threading.Thread(target=run_health, daemon=True)
 thread.start()
 
-# ایمپورت و اجرای ربات
+# ایمپورت ربات اصلی
 from bot.ultimate_bot import UltimateBot
 from database.models import init_database
 
