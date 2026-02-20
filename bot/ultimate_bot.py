@@ -26,7 +26,12 @@ import os
 from typing import Dict, Any, Optional
 import sys
 from pathlib import Path
-
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
+from telegram import Update
+import json
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
+import asyncio
 # اضافه کردن مسیر
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -1252,6 +1257,10 @@ class UltimateBot:
         
         # ایجاد اپلیکیشن
         app = Application.builder().token(TELEGRAM_TOKEN).build()
+                # راه‌اندازی webhook server در thread جدا
+                webhook_thread = threading.Thread(target=self._run_webhook_server, daemon=True)
+                webhook_thread.start()
+
         
         # هندلرها
         app.add_handler(CommandHandler("start", self.start))
@@ -1302,3 +1311,72 @@ class UltimateBot:
             "📝 Please send your feedback:"
         )
         context.user_data['state'] = WAITING_FOR_FEEDBACK
+# ==================== Webhook Server ====================
+class WebhookServer:
+    def __init__(self, bot_app):
+        self.bot_app = bot_app
+        self.server = None
+    
+    async def handle_webhook(self, request):
+        try:
+            content_length = int(request.headers.get('Content-Length', 0))
+            post_data = await request.read()
+            update = Update.de_json(json.loads(post_data), self.bot_app.bot)
+            await self.bot_app.process_update(update)
+            return web.Response(text='OK')
+        except Exception as e:
+            print(f"Webhook error: {e}")
+            return web.Response(text='Error', status=500)
+    
+    def run(self):
+        from aiohttp import web
+        app = web.Application()
+        app.router.add_post('/webhook', self.handle_webhook)
+
+    def _run_webhook_server(self):
+        """راه‌اندازی سرور webhook در پورت 8080"""
+        import threading
+        import asyncio
+        import json
+        from aiohttp import web
+        from telegram import Update
+        
+        async def webhook_handler(request):
+            try:
+                data = await request.json()
+                if hasattr(self, 'app') and self.app:
+                    update = Update.de_json(data, self.app.bot)
+                    await self.app.process_update(update)
+                return web.Response(text='OK')
+            except Exception as e:
+                print(f"Webhook error: {e}")
+                return web.Response(text='Error', status=500)
+        
+        async def run_server():
+            app = web.Application()
+            app.router.add_post('/webhook', webhook_handler)
+            
+            runner = web.AppRunner(app)
+            await runner.setup()
+            site = web.TCPSite(runner, '0.0.0.0', 8080)
+            await site.start()
+            print("✅ Webhook server running on port 8080")
+            
+            # نگه داشتن سرور فعال
+            while True:
+                await asyncio.sleep(3600)
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(run_server())
+        loop.run_forever()
+
+        
+        runner = web.AppRunner(app)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(runner.setup())
+        site = web.TCPSite(runner, '0.0.0.0', 8080)
+        loop.run_until_complete(site.start())
+        print("✅ Webhook server running on port 8080")
+        loop.run_forever()
