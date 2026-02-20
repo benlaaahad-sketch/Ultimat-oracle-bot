@@ -3,9 +3,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python simple_server.py",
-    "healthcheckPath": "/",
-    "healthcheckTimeout": 5,
+    "startCommand": "python main.py",
     "restartPolicyType": "NEVER"
   }
 }

@@ -1,104 +1,27 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-The Ultimate Oracle Bot - Main Entry Point
-Version: 1.0.0
-"""
-
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
-# ==================== Healthcheck server ====================
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
-        self.end_headers()
-        self.wfile.write(b'OK')
-    
-    def log_message(self, format, *args):
-        pass
-
-def run_health_server():
-    server = HTTPServer(('0.0.0.0', 8080), HealthCheckHandler)
-    server.serve_forever()
-
-# راه‌اندازی healthcheck
-health_thread = threading.Thread(target=run_health_server, daemon=True)
-health_thread.start()
-print("✅ Healthcheck server started on port 8080")
-# ============================================================
-# تنظیم مسیر
 sys.path.append(str(Path(__file__).parent))
 
-# تلاش برای import ماژول‌ها
-try:
-    from bot.ultimate_bot import UltimateBot
-    from database.models import init_database
-    from utils.logger import setup_logger
-    from config import *
-except ImportError as e:
-    print(f"❌ Import error: {e}")
-    print("📝 Make sure all files are created correctly")
-    sys.exit(1)
-
-# تنظیم لاگ
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger('main')
-
-def create_initial_backup():
-    """ایجاد پشتیبان اولیه قبل از اجرا"""
-    try:
-        from utils.backup_manager import BackupManager
-        bm = BackupManager()
-        backup = bm.create_backup("initial_setup")
-        if backup['success']:
-            logger.info(f"✅ Initial backup created: {backup['file']} ({backup['size_mb']} MB)")
-        else:
-            logger.warning("⚠️ Initial backup failed")
-    except Exception as e:
-        logger.error(f"❌ Backup error: {e}")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def main():
-    """نقطه ورود اصلی"""
+    logger.info("🚀 Starting bot...")
     
-    logger.info("="*60)
-    logger.info("🚀 Starting The Ultimate Oracle Bot")
-    logger.info("="*60)
+    # ایمپورت ربات
+    from bot.ultimate_bot import UltimateBot
+    from database.models import init_database
     
-    try:
-        # ایجاد پشتیبان اولیه
-        logger.info("📦 Creating initial backup...")
-        create_initial_backup()
-        
-        # راه‌اندازی دیتابیس
-        logger.info("🗄️ Initializing database...")
-        init_database()
-        
-        # ایجاد ربات
-        logger.info("🤖 Creating bot instance...")
-        bot = UltimateBot()
-        
-        # اجرا
-        logger.info("✅ Bot is ready! Press Ctrl+C to stop")
-        bot.run()
-        
-    except KeyboardInterrupt:
-        logger.info("👋 Bot stopped by user")
-    except Exception as e:
-        logger.error(f"❌ Fatal error: {e}", exc_info=True)
-        sys.exit(1)
+    # راه‌اندازی دیتابیس
+    init_database()
     
-    logger.info("="*60)
+    # اجرای ربات
+    bot = UltimateBot()
+    bot.run()
 
 if __name__ == "__main__":
     main()
